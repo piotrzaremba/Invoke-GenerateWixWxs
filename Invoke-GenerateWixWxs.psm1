@@ -1,14 +1,14 @@
-﻿Param(
-    [Parameter(Mandatory=$true)]
-    [string]$wxsFileName
-)
+﻿function Invoke-GenerateWixWxs
+{
+	Param([Parameter(Mandatory=$true)]
+		  [string]$wxsFileName)
 
-$updateCode=[GUID]::NewGuid()
-$directoryName=(Get-Item -Path ".\" -Verbose).Name
+	$updateCode=[GUID]::NewGuid()
+	$directoryName=(Get-Item -Path ".\" -Verbose).Name
 
-$exes=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'exe$'} | Where {$_.Name -NotMatch 'vshost.exe$'} | Foreach { $_.Name }
-$dlls=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'dll$'} | Foreach { $_.Name }
-$configs=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'config$'} | Where {$_.Name -NotMatch 'vshost.exe.config$'} | Foreach { $_.Name }
+	$exes=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'exe$'} | Where {$_.Name -NotMatch 'vshost.exe$'} | Foreach { $_.Name }
+	$dlls=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'dll$'} | Foreach { $_.Name }
+	$configs=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'config$'} | Where {$_.Name -NotMatch 'vshost.exe.config$'} | Foreach { $_.Name }
 
 $wxs=@"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -82,28 +82,31 @@ $wxs +=@"
 </Wix>`n
 "@
 
-$path=".\bin\Release"
+	$path=".\bin\Release"
 
-if((Test-Path ".\bin\Debug"))
-{
-    $path=".\bin\Debug"
+	if((Test-Path ".\bin\Debug"))
+	{
+		$path=".\bin\Debug"
 
-    if (!(Test-Path "$path\$wxsFileName.wxs"))
-    {
-        New-Item "$path\$wxsFileName.wxs" -type file
-    }
+		if (!(Test-Path "$path\$wxsFileName.wxs"))
+		{
+			New-Item "$path\$wxsFileName.wxs" -type file
+		}
 
-    Set-Content "$path\$wxsFileName.wxs" "$wxs"
+		Set-Content "$path\$wxsFileName.wxs" "$wxs"
+	}
+
+	if((Test-Path ".\bin\Release"))
+	{
+		$path=".\bin\Release"
+
+		if (!(Test-Path "$path\$wxsFileName.wxs"))
+		{
+			New-Item "$path\$wxsFileName.wxs" -type file
+		}
+
+		Set-Content "$path\$wxsFileName.wxs" "$wxs"
+	}
 }
 
-if((Test-Path ".\bin\Release"))
-{
-    $path=".\bin\Release"
-
-    if (!(Test-Path "$path\$wxsFileName.wxs"))
-    {
-        New-Item "$path\$wxsFileName.wxs" -type file
-    }
-
-    Set-Content "$path\$wxsFileName.wxs" "$wxs"
-}
+Export-ModuleMember -function Invoke-GenerateWixWxs
