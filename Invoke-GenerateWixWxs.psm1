@@ -1,14 +1,34 @@
 ﻿function Invoke-GenerateWixWxs
 {
 	Param([Parameter(Mandatory=$true)]
-		  [string]$wxsFileName)
+          [ValidateNotNullOrEmpty()]
+		  [string]$WxsFileName,
+          [Parameter(Mandatory = $true)]
+          [ValidateNotNullOrEmpty()]
+          [ValidateSet('Debug', 'Release')]
+          [String]$Configuration,
+          [Parameter(Mandatory = $true)]
+          [bool]$MoveWxsFile)
 
 	$updateCode=[GUID]::NewGuid()
 	$directoryName=(Get-Item -Path ".\" -Verbose).Name
 
-	$exes=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'exe$'} | Where {$_.Name -NotMatch 'vshost.exe$'} | Foreach { $_.Name }
-	$dlls=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'dll$'} | Foreach { $_.Name }
-	$configs=Get-ChildItem .\bin\Release | Where {$_.Name -Match 'config$'} | Where {$_.Name -NotMatch 'vshost.exe.config$'} | Foreach { $_.Name }
+    $path=""
+    switch ($Configuration) 
+    { 
+        Debug {$path=".\bin\Debug"} 
+        Release {$path=".\bin\Release"} 
+    }
+
+    if(!(Test-Path $path))
+	{
+        Write-Host "Path $path does not exist."
+        return; 
+	}
+
+	$exes=Get-ChildItem $path | Where {$_.Name -Match 'exe$'} | Where {$_.Name -NotMatch 'vshost.exe$'} | Foreach { $_.Name }
+	$dlls=Get-ChildItem $path | Where {$_.Name -Match 'dll$'} | Foreach { $_.Name }
+	$configs=Get-ChildItem $path | Where {$_.Name -Match 'config$'} | Where {$_.Name -NotMatch 'vshost.exe.config$'} | Foreach { $_.Name }
 
 $wxs=@"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -47,7 +67,6 @@ $wxs=@"
         <CreateFolder />`n
 "@
 
-
 foreach ($dll in $dlls) {
 $wxs +=@"
         <File Id="$directoryName.DLL.$dll" Source="..\$directoryName\bin\`$(var.Configuration)\$dll" />`n
@@ -61,14 +80,17 @@ $wxs +=@"
   <Fragment>
     <ComponentGroup Id="ProductComponents" Directory="InstallFolder">`n
 "@
-      foreach ($exe in $exes) {
+
+foreach ($exe in $exes) {
 $wxs +=@"
       <Component Id="$directoryName.Binaries.$exe" Guid="$([GUID]::NewGuid())">
         <File Id="$directoryName.Binaries.$exe" Source="..\$directoryName\bin\`$(var.Configuration)\$exe" />
       </Component>`n
 "@
+
 }
-      foreach ($config in $configs) 
+
+foreach ($config in $configs) 
 {
 $wxs +=@"
       <Component Id="$directoryName.Config.$config" Guid="$([GUID]::NewGuid())">
@@ -76,37 +98,25 @@ $wxs +=@"
       </Component>`n
 "@
 }
+
 $wxs +=@"
     </ComponentGroup>
   </Fragment>
 </Wix>`n
 "@
 
-	$path=".\bin\Release"
-
-	if((Test-Path ".\bin\Debug"))
+	if (!(Test-Path "$path\$wxsFileName.wxs"))
 	{
-		$path=".\bin\Debug"
-
-		if (!(Test-Path "$path\$wxsFileName.wxs"))
-		{
-			New-Item "$path\$wxsFileName.wxs" -type file
-		}
-
-		Set-Content "$path\$wxsFileName.wxs" "$wxs"
+		New-Item "$path\$wxsFileName.wxs" -type file
 	}
 
-	if((Test-Path ".\bin\Release"))
-	{
-		$path=".\bin\Release"
+	Set-Content "$path\$wxsFileName.wxs" "$wxs"
 
-		if (!(Test-Path "$path\$wxsFileName.wxs"))
-		{
-			New-Item "$path\$wxsFileName.wxs" -type file
-		}
+    if($MoveWxsFile)
+    {
+        Move-Item "$path\$wxsFileName.wxs" "..\$directoryName.Msi\"
+    }
 
-		Set-Content "$path\$wxsFileName.wxs" "$wxs"
-	}
 }
 
 Export-ModuleMember -function Invoke-GenerateWixWxs
