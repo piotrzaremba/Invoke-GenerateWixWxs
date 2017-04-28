@@ -50,7 +50,7 @@ $wxs=@"
     <SetProperty Id="ProgramFilesFolder" Value="[LocalAppDataFolder]" Before="CostFinalize"><![CDATA[NOT Privileged]]></SetProperty>
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFilesFolder">
-        <Directory Id="Root" Name="INTL">
+        <Directory Id="RootDirectory" Name="INTL">
         <Directory Id="InstallFolder" Name="$directoryName.Msi" >
           <Directory Id="LibDirectory" Name="lib" />
         </Directory>
