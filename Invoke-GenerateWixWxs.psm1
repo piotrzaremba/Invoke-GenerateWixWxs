@@ -7,6 +7,8 @@
           [ValidateNotNullOrEmpty()]
           [ValidateSet('Debug', 'Release')]
           [String]$Configuration,
+		  [Parameter(Mandatory = $true)]
+          [bool]$HasIcon,
           [Parameter(Mandatory = $true)]
           [bool]$MoveWxsFile)
 
@@ -41,6 +43,8 @@ $wxs=@"
       <ComponentGroupRef Id="ProductComponents" />
       <ComponentRef Id="ProductLib" />
       <ComponentRef Id="ProductRoot" />
+	  <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="ApplicationShortcutDesktop" />
     </Feature>
     <Upgrade Id="$updateCode">
       <UpgradeVersion Property="REMOVINGTHEOLDVERSION" Minimum="1.0.0.0" RemoveFeatures="ALL" OnlyDetect="no" />
@@ -56,6 +60,10 @@ $wxs=@"
         </Directory>
         </Directory>
       </Directory>
+	        <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="$directoryName" />
+      </Directory>
+      <Directory Id="DesktopFolder" Name="Desktop"/>
     </Directory>
     <DirectoryRef Id="RootDirectory">
       <Component Id="ProductRoot" Guid="$([GUID]::NewGuid())" KeyPath="yes">
@@ -75,11 +83,56 @@ $wxs +=@"
 
 $wxs +=@"
       </Component>
-    </DirectoryRef>
+    </DirectoryRef>`n
+"@	
+
+    if($HasIcon)
+    {
+$wxs+=@"
+	<Icon Id="$directoryName.ico" SourceFile="..\$directoryName\bin\`$(var.Configuration)\$directoryName.ico" />
+	<DirectoryRef Id="ApplicationProgramsFolder">
+     <Component Id="ApplicationShortcut" Guid="$([GUID]::NewGuid())">
+       <Shortcut Id="ApplicationStartMenuShortcut" Icon="$directoryName.ico" Name="$directoryName.Msi" Description="$directoryName.Msi" Target="[InstallFolder]$directoryName.exe" WorkingDirectory="InstallFolder" />
+       <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+       <RegistryValue Root="HKCU" Key="Software\INTLFCStone\$directoryName.Msi" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+     </Component>
+   </DirectoryRef>
+   <DirectoryRef Id="DesktopFolder">
+     <Component Id="ApplicationShortcutDesktop" Guid="$([GUID]::NewGuid())">
+       <Shortcut Id="ApplicationDesktopShortcut" Icon="$directoryName.ico" Name="$directoryName.Msi" Description="$directoryName.Msi>" Target="[InstallFolder]$directoryName.exe" WorkingDirectory="InstallFolder" />
+       <RemoveFolder Id="RemoveDesktopFolder" Directory="DesktopFolder" On="uninstall" />
+       <RegistryValue Root="HKCU" Key="Software\INTLFCStone\I$directoryName.Msi" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+     </Component>
+   </DirectoryRef>
+	
   </Fragment>
   <Fragment>
     <ComponentGroup Id="ProductComponents" Directory="InstallFolder">`n
 "@
+	}
+	else
+	{
+$wxs+=@"    
+<DirectoryRef Id="ApplicationProgramsFolder">
+     <Component Id="ApplicationShortcut" Guid="$([GUID]::NewGuid())">
+       <Shortcut Id="ApplicationStartMenuShortcut" Name="$directoryName.Msi" Description="$directoryName.Msi" Target="[InstallFolder]$directoryName.exe" WorkingDirectory="InstallFolder" />
+       <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+       <RegistryValue Root="HKCU" Key="Software\INTLFCStone\$directoryName.Msi" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+     </Component>
+   </DirectoryRef>
+   <DirectoryRef Id="DesktopFolder">
+     <Component Id="ApplicationShortcutDesktop" Guid="$([GUID]::NewGuid())">
+       <Shortcut Id="ApplicationDesktopShortcut" Name="$directoryName.Msi" Description="$directoryName.Msi>" Target="[InstallFolder]$directoryName.exe" WorkingDirectory="InstallFolder" />
+       <RemoveFolder Id="RemoveDesktopFolder" Directory="DesktopFolder" On="uninstall" />
+       <RegistryValue Root="HKCU" Key="Software\INTLFCStone\I$directoryName.Msi" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+     </Component>
+   </DirectoryRef>
+	
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="InstallFolder">`n
+"@
+	}
 
 foreach ($exe in $exes) {
 $wxs +=@"
